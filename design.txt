@@ -1,0 +1,80 @@
+database
+    5 relational tables
+    design process
+        business operations/constraints
+        ER-model
+        relational model
+        normalization
+        implementation
+        indexing
+        enforcing general constraints (e.g. triggers, etc)
+
+website
+    user types
+        super admin creates a profile for a university (name, location, description,
+                    number of students, pictures, etc.)
+                    approves/denies RSOless events
+        
+        admin       owns an RSO and may host events
+                    affiliated with one university
+                    affiliated with one or more RSOs
+                    can create events
+        
+        student     uses the application to look up information about the various events
+                    can request to create a new RSO or to join an existing one
+                    can view events in their university by location, 
+                        or by selecting the university they want to see events from
+                    can retrieve events according to their level of access or scope
+                    can see all the events around their location,
+                        or from RSOs they are a part of
+
+    events
+        created by an admin
+        attributes
+            name
+            type    social, fundraising, tech talks, etc
+            description
+            time
+            date
+            location    should be set from a map (google maps, etc)
+                name
+                latitude
+                longitude
+                etc 
+            phone
+            email
+            access
+                public  can be seen by everyone
+                university (private) can be seen by the students of the host university
+                RSO     can only be seen by members of the RSO
+            RSO
+                from admin
+                or RSOless if approved by super admin
+        comments    users can add, remove, and edit comments
+        rating      users can rate event up to 5 stars
+
+    Registered Student Organizations (RSOs)
+        can be created with at least 5 other students with the same email domain, 
+            one user should be assigned administrator
+
+    interface
+        available to super admin                        <---|
+            create university profile                       |
+            accept/deny RSOless events                      |
+        available to admin                          <---|   |
+            create events                               |   |
+        available to students                   <---|   |   |
+            create/join RSO                         |   |   |
+            profile management?                     |   |   |
+            view public, university, RSO events     |   |   |
+        available to everyone               <---|   |   |   |
+            view public events                  |   |   |   |
+            login (with user id, password)  <---| <-| <-| <-|
+
+advanced features
+    social network integration
+    database populated with event feeds from university's events system
+    crash recovery policy/procedures
+    security
+    index-only/composite search key indices
+    etc    
