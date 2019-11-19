@@ -19,7 +19,9 @@ import Control.Monad.Logger (LogSource)
 -- Used only when in "auth-dummy-login" setting is enabled.
 import Yesod.Auth.Dummy
 
-import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+-- import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+import Yesod.Auth
+import Yesod.Auth.Account
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
@@ -266,7 +268,7 @@ instance YesodAuth App where
     authenticate :: (MonadHandler m, HandlerSite m ~ App)
                  => Creds App -> m (AuthenticationResult App)
     authenticate creds = liftHandler $ runDB $ do
-        x <- getBy $ UniqueUser $ credsIdent creds
+        x <- getBy $ UniqueUsername $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
             Nothing -> Authenticated <$> insert User
@@ -276,7 +278,7 @@ instance YesodAuth App where
 
     -- You can add other plugins like Google Email, email or OAuth here
     authPlugins :: App -> [AuthPlugin App]
-    authPlugins app = [authOpenId Claimed []] ++ extraAuthPlugins
+    authPlugins app = [accountPlugin] ++ extraAuthPlugins
         -- Enable authDummy login if enabled.
         where extraAuthPlugins = [authDummy | appAuthDummyLogin $ appSettings app]
 
@@ -288,12 +290,22 @@ isAuthenticated = do
         Nothing -> Unauthorized "You must login to access this page"
         Just _ -> Authorized
 
--- -- Determines if a user is a Super Admin
--- isSuperAdmin :: Handler AuthResult
--- isSuperAdmin = do
---     muid <-
-
 instance YesodAuthPersist App
+
+instance AccountSendEmail App
+
+instance YesodAuthAccount (AccountPersistDB App User) App where
+    runAccountDB = runAccountPersistDB
+
+instance PersistUserCredentials User where
+    userUsernameF = UserUsername
+    userPasswordHashF = UserPassword
+    userEmailF = UserEmailAddress
+    userEmailVerifiedF = UserVerifyKey
+    userResetPwdKeyF = UserResetPwdKey
+    uniqueUsername = UniqueUsername
+
+    userCreate name email key pwd = User name pwd email False key ""
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.

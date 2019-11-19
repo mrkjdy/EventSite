@@ -2,10 +2,17 @@
 -- Syntax for this file here: https://github.com/yesodweb/persistent/blob/master/docs/Persistent-entity-syntax.md
 
 User
-    ident Text
-    password Text Maybe
-    UniqueUser ident
-    deriving Typeable
+    username Text
+    UniqueUsername username
+    password ByteString
+    emailAddress Text
+    verified Bool
+    verifyKey Text
+    resetPasswordKey Text
+    userType UserType
+    firstName Text Maybe
+    lastName Text Maybe
+    deriving Show Typeable
 Email
     email Text
     userId UserId Maybe

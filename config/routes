@@ -14,4 +14,4 @@
 /profile ProfileR GET
 /events EventsR GET POST
 /rsos RSOsR GET POST
-universities UniversitiesR GET POST
+/universities UniversitiesR GET POST
