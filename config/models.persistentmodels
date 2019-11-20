@@ -9,6 +9,7 @@ User
     userType UserType
     firstName Text Maybe
     lastName Text Maybe
+    universityId UniversityId Maybe
     UniqueUser email
     deriving Typeable
 Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived.
@@ -16,3 +17,24 @@ Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived
     userId UserId Maybe
     deriving Eq
     deriving Show
+Event
+    name Text
+    eventType EventType
+    description Text Maybe
+    dateTime UTCTime
+    userId UserId
+    rsoId RSOId
+    location Text
+    deriving Show
+RSO
+    name Text
+    description Text
+    deriving Show
+University
+    name Text
+    location Text
+    description Text
+    deriving Show
+UserRSO
+    userId UserId
+    rsoId RSOId

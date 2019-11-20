@@ -77,6 +77,10 @@ type Form x = Html -> MForm (HandlerFor App) (FormResult x, Widget)
 type DB a = forall (m :: * -> *).
     (MonadIO m) => ReaderT SqlBackend m a
 
+isSuper :: Maybe (Entity User) -> Bool
+isSuper Nothing = False
+isSuper (Just muser) = userUserType (entityVal muser) == Super
+
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod App where
@@ -110,7 +114,7 @@ instance Yesod App where
         master <- getYesod
         mmsg <- getMessage
 
-        muser <- maybeAuthPair
+        muser <- maybeAuth
         mcurrentRoute <- getCurrentRoute
 
         -- Get the breadcrumbs, as defined in the YesodBreadcrumbs instance.
@@ -136,7 +140,7 @@ instance Yesod App where
                 , NavbarLeft $ MenuItem
                     { menuItemLabel = "Universities"
                     , menuItemRoute = UniversitiesR
-                    , menuItemAccessCallback = isJust muser
+                    , menuItemAccessCallback = isSuper muser
                     }
                 , NavbarRight $ MenuItem
                     { menuItemLabel = "Profile"
@@ -244,7 +248,10 @@ instance YesodBreadcrumbs App where
     breadcrumb HomeR = return ("Home", Nothing)
     breadcrumb (AuthR _) = return ("Login", Just HomeR)
     breadcrumb ProfileR = return ("Profile", Just HomeR)
-    breadcrumb  _ = return ("home", Nothing)
+    breadcrumb EventsR = return ("Events", Just HomeR)
+    breadcrumb RSOsR = return ("RSOs", Just HomeR)
+    breadcrumb UniversitiesR = return ("Universities", Just HomeR)
+    breadcrumb _ = return ("home", Nothing)
 
 -- How to run database actions.
 instance YesodPersist App where
@@ -282,6 +289,7 @@ instance YesodAuth App where
                 , userUserType = Standard
                 , userFirstName = Nothing
                 , userLastName = Nothing
+                , userUniversityId = Nothing
                 }
 
     -- You can add other plugins like Google Email, email or OAuth here
@@ -306,6 +314,7 @@ instance YesodAuthEmail App where
             , userUserType = Standard
             , userFirstName = Nothing
             , userLastName = Nothing
+            , userUniversityId = Nothing
             }
 
     -- Send an email to the given address to verify ownership

@@ -1,12 +1,17 @@
+$if isJust muser
+    <div .container>
+        <div .row>
+            <a href=@{HomeR} .btn.btn-info> Create a new event
+            <p>
 <table .table .table-striped .table-hover .table-responsive>
     <tr>
         <th> Event
         <th> Type
         <th> Date
         <th> Time
-    $forall Event label route eventType date time<- eventList
+    $forall entityEvent <- eventList
         <tr> 
-            <td> <a href="@{route}">#{label}</a> 
-            <td> #{eventType} 
-            <td> #{date} 
-            <td> #{time} 
+            <td> <a href=@{HomeR}>#{eventName $ entityVal entityEvent}
+            <td> "" 
+            <td> ""
+            <td> ""
