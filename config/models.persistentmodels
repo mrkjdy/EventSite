@@ -24,6 +24,7 @@ Event
     dateTime UTCTime
     userId UserId
     rsoId RSOId
+    universityId UniversityId Maybe
     location Text
     deriving Show
 RSO

@@ -8,14 +8,16 @@ import Import
 
 getEventsR :: Handler Html
 getEventsR = do
-    muser <- maybeAuthPair
+    muser <- maybeAuth
     eventList <- runDB $
         case muser of
-            Nothing -> selectList 
+            Nothing -> selectList
                 [EventEventType ==. PublicEvent] [Asc EventDateTime]
-            Just _ ->  selectList 
-                (   [EventEventType ==. PublicEvent]
-                ||. [EventEventType ==. UniversityEvent]
+            (Just euser) ->  selectList
+                (   [ EventEventType ==. PublicEvent ]
+                ||. [ EventEventType ==. UniversityEvent
+                    -- , EventUniversityId ==. UniversityId $ userUniversityId $ entityVal euser
+                    ]
                 ) 
                 [Asc EventDateTime]
     defaultLayout $ do

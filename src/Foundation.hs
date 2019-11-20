@@ -77,9 +77,13 @@ type Form x = Html -> MForm (HandlerFor App) (FormResult x, Widget)
 type DB a = forall (m :: * -> *).
     (MonadIO m) => ReaderT SqlBackend m a
 
+isHost :: Maybe (Entity User) -> Bool
+isHost Nothing = False
+isHost (Just euser) = userUserType (entityVal euser) /= Standard
+
 isSuper :: Maybe (Entity User) -> Bool
 isSuper Nothing = False
-isSuper (Just muser) = userUserType (entityVal muser) == Super
+isSuper (Just euser) = userUserType (entityVal euser) == Super
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.

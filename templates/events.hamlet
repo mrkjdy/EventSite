@@ -1,4 +1,4 @@
-$if isJust muser
+$if isHost muser
     <div .container>
         <div .row>
             <a href=@{HomeR} .btn.btn-info> Create a new event
