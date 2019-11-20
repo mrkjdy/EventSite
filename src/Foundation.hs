@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -13,19 +14,25 @@ module Foundation where
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Text.Hamlet          (hamletFile)
+import Text.Shakespeare.Text (stext)
 import Text.Jasmine         (minifym)
 import Control.Monad.Logger (LogSource)
 
 -- Used only when in "auth-dummy-login" setting is enabled.
-import Yesod.Auth.Dummy
+-- import Yesod.Auth.Dummy
 
 import EntitySumFields
-import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+-- import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+import Yesod.Auth.Email
+import Network.Mail.Mime
+import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
+import Data.Text as DT      (pack)
 import qualified Yesod.Core.Unsafe as Unsafe
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Lazy.Encoding as LTE (encodeUtf8)
 
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -96,7 +103,7 @@ instance Yesod App where
     -- To add it, chain it together with the defaultMiddleware: yesodMiddleware = defaultYesodMiddleware . defaultCsrfMiddleware
     -- For details, see the CSRF documentation in the Yesod.Core.Handler module of the yesod-core package.
     yesodMiddleware :: ToTypedContent res => Handler res -> Handler res
-    yesodMiddleware = defaultYesodMiddleware
+    yesodMiddleware = defaultCsrfMiddleware . defaultYesodMiddleware
 
     defaultLayout :: Widget -> Handler Html
     defaultLayout widget = do
@@ -260,20 +267,18 @@ instance YesodAuth App where
     -- Where to send a user after logout
     logoutDest :: App -> Route App
     logoutDest _ = HomeR
-    -- Override the above two destinations when a Referer: header is present
-    redirectToReferer :: App -> Bool
-    redirectToReferer _ = True
-
+    
     authenticate :: (MonadHandler m, HandlerSite m ~ App)
                  => Creds App -> m (AuthenticationResult App)
     authenticate creds = liftHandler $ runDB $ do
-        x <- getBy $ UniqueIdent $ credsIdent creds
+        x <- getBy $ UniqueUser (credsIdent creds)
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
             Nothing -> Authenticated <$> insert User
-                { userIdent = credsIdent creds
-                , userPassword = ""
-                , userEmailAddress = ""
+                { userEmail = credsIdent creds
+                , userPassword = Nothing
+                , userVerkey = Nothing
+                , userVerified = False
                 , userUserType = Standard
                 , userFirstName = Nothing
                 , userLastName = Nothing
@@ -281,9 +286,120 @@ instance YesodAuth App where
 
     -- You can add other plugins like Google Email, email or OAuth here
     authPlugins :: App -> [AuthPlugin App]
-    authPlugins app = [authOpenId Claimed []] ++ extraAuthPlugins
-        -- Enable authDummy login if enabled.
-        where extraAuthPlugins = [authDummy | appAuthDummyLogin $ appSettings app]
+    authPlugins _ = [authEmail]
+    -- authPlugins app = [authOpenId Claimed []] ++ extraAuthPlugins
+    --     -- Enable authDummy login if enabled.
+    --     where extraAuthPlugins = [authDummy | appAuthDummyLogin $ appSettings app]
+
+instance YesodAuthEmail App where
+    type AuthEmailId App = UserId
+
+    afterPasswordRoute _ = HomeR
+
+    -- For adding a new email to the database
+    addUnverified email verkey =
+        liftHandler $ runDB $ insert $ User
+            { userEmail = email
+            , userPassword = Nothing
+            , userVerkey = Just verkey
+            , userVerified = False
+            , userUserType = Standard
+            , userFirstName = Nothing
+            , userLastName = Nothing
+            }
+
+    -- Send an email to the given address to verify ownership
+    -- sendVerifyEmail :: Email -> VerKey -> VerUrl -> AuthHandler site ()
+    sendVerifyEmail email _ verurl = do
+        -- Print the verification email to the console for debugging
+        liftIO $ putStrLn $ DT.pack ("Copy/ Paste this URL in your browser:") ++ verurl
+
+        -- Send email
+        liftIO $ renderSendMail (emptyMail $ Address Nothing "noreply")
+            { mailTo = [Address Nothing email]
+            , mailHeaders = 
+                [ ("Subject", "Verify your email address")
+                ]
+            , mailParts = [[myTextPart, myHtmlPart]]
+            }
+            where
+                myTextPart = Part
+                    { partType = "text/plain; charset=utf-8"
+                    , partEncoding = None
+                    , partDisposition = DefaultDisposition
+                    , partContent = PartContent $ LTE.encodeUtf8
+                        [stext|
+                            Please confirm your email address by clicking on the link below.
+                            
+                            #{verurl}
+                            
+                            Thank you
+                        |]
+                    , partHeaders = []
+                    }
+                myHtmlPart = Part
+                    { partType = "text/html; charset=utf-8"
+                    , partEncoding = None
+                    , partDisposition = DefaultDisposition
+                    , partContent = PartContent $ renderHtml
+                        [shamlet|
+                            <p>Please confirm your email address by clicking on the link below.
+                            <p>
+                                <a href=#{verurl}>#{verurl}
+                            <p>Thank you
+                        |]
+                    , partHeaders = []
+                    }
+    
+    -- Gets the verification key for the given email ID
+    -- getVerifyKey :: AuthEmailId App -> AuthHandler site (Maybe VerKey)
+    getVerifyKey = liftHandler . runDB . fmap (join . fmap userVerkey) . get
+
+    -- Set the verification key for the given email ID
+    -- setVerifyKey :: AuthEmailId site -> AuthHandler site (Maybe VerKey)
+    setVerifyKey uid key = liftHandler $ runDB $ update uid [UserVerkey =. Just key]
+
+    -- Verify the email address on the given account
+    -- verifyAccount :: AuthEmailId site -> AuthHandler site (Maybe (AuthId site))
+    verifyAccount uid = liftHandler $ runDB $ do
+        mu <- get uid
+        case mu of
+            Nothing -> return Nothing
+            Just _ -> do
+                update uid [UserVerified =. True, UserVerkey =. Nothing]
+                return $ Just uid
+
+    -- Get the salted password for the given account
+    -- getPassword :: AuthId site -> AuthHandler site (Maybe SaltedPass)
+    getPassword = liftHandler . runDB . fmap (join . fmap userPassword) . get
+
+    -- Set the salted password for the given account
+    -- setPassword :: AuthId site -> SaltedPass -> AuthHandler site ()
+    setPassword uid pass = liftHandler . runDB $ update uid [UserPassword =. Just pass]
+    
+    -- Get the credentials for the given @Identifier@, which may be either an,
+    -- email address or some other identification.
+    -- getEmailCreds :: Identifier -> AuthHandler site (Maybe (EmailCreds site))
+    getEmailCreds email = liftHandler $ runDB $ do
+        mu <- getBy $ UniqueUser email
+        case mu of
+            Nothing -> return Nothing
+            Just (Entity uid u) -> return $ Just EmailCreds
+                { emailCredsId = uid
+                , emailCredsAuthId = Just uid
+                , emailCredsStatus = isJust $ userPassword u
+                , emailCredsVerkey = userVerkey u
+                , emailCredsEmail = email
+                }
+
+    -- Get the email address for the given email ID.
+    -- getEmail :: AuthEmailId site -> AuthHandler site (Maybe Email)
+    getEmail = liftHandler . runDB . fmap (fmap userEmail) . get
+
+    -- Handler called to render the registration page
+    -- registerHandler :: AuthHandler site Html
+    -- registerHandler = do
+    --     (widget, enctype) <- generateFormPost registrationForm
 
 -- | Access function to determine if a user is logged in.
 isAuthenticated :: Handler AuthResult

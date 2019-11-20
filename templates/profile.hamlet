@@ -7,4 +7,4 @@
       This page should be for managing your profile.
 
     <p>
-      Your username is: <strong><span class="username">#{userIdent user}</span></strong>
+      Your email is: <strong><span class="username">#{userEmail user}</span></strong>

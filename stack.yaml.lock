@@ -3,21 +3,7 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: pwstore-fast-2.4.4@sha256:9b6a37510d8b9f37f409a8ab3babac9181afcaaa3fce8ba1c131a7ed3de30698,1351
-    pantry-tree:
-      size: 270
-      sha256: ff4a44ede62515efe5cd366a5803f7183c811c4a0cf56eea88da94181c4844c0
-  original:
-    hackage: pwstore-fast-2.4.4
-- completed:
-    hackage: yesod-auth-account-1.4.3@sha256:32d0f11ee68bdf5ba6ff833f7d98bef25a97f41f59581580ed277ea90861692c,2368
-    pantry-tree:
-      size: 680
-      sha256: a5bbafcb072b702213a75ab6c03ebce17420b7b0e8a74f87dd9e192f47ea94dd
-  original:
-    hackage: yesod-auth-account-1.4.3
+packages: []
 snapshots:
 - completed:
     size: 525663
