@@ -11,7 +11,10 @@
 
 /comments CommentR POST
 
-/profile ProfileR GET
-/events EventsR GET POST
-/rsos RSOsR GET POST
-/universities UniversitiesR GET POST
+/profile ProfileR GET POST
+/events EventsR GET
+/rsos RSOsR GET
+/universities UniversitiesR GET
+/create/event CreateEventR GET POST
+/create/rso CreateRSOR GET POST
+/create/university CreateUniversityR GET POST

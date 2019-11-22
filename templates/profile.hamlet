@@ -4,7 +4,14 @@
       Profile Managment
 
     <p>
-      This page should be for managing your profile.
+      This page is for managing your profile.
+
+    <!--- <form role=form method=post action=@{ProfileR} enctype=#{formEnctype}>
+      ^{formWidget}
+
+      <button .btn.btn-primary type="submit">
+          Update profile
+    --->
 
     <p>
       Your email is: <strong><span class="username">#{userEmail user}</span></strong>

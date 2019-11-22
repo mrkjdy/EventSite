@@ -204,6 +204,9 @@ instance Yesod App where
     isAuthorized ProfileR _ = isAuthenticated
     isAuthorized RSOsR _ = isAuthenticated
     isAuthorized UniversitiesR _ = isAuthenticated
+    isAuthorized CreateEventR _ = isAuthenticatedType isHost
+    isAuthorized CreateRSOR _ = isAuthenticatedType isHost
+    isAuthorized CreateUniversityR _ = isAuthenticatedType isSuper
 
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
@@ -310,16 +313,28 @@ instance YesodAuthEmail App where
 
     -- For adding a new email to the database
     addUnverified email verkey =
-        liftHandler $ runDB $ insert $ User
-            { userEmail = email
-            , userPassword = Nothing
-            , userVerkey = Just verkey
-            , userVerified = False
-            , userUserType = Standard
-            , userFirstName = Nothing
-            , userLastName = Nothing
-            , userUniversityId = Nothing
-            }
+        liftHandler $ runDB $ 
+            case email of
+                "markjudy@knights.ucf.edu" -> insert $ User
+                    { userEmail = email
+                    , userPassword = Nothing
+                    , userVerkey = Just verkey
+                    , userVerified = False
+                    , userUserType = Super
+                    , userFirstName = Nothing
+                    , userLastName = Nothing
+                    , userUniversityId = Nothing
+                    }
+                _ -> insert $ User
+                    { userEmail = email
+                    , userPassword = Nothing
+                    , userVerkey = Just verkey
+                    , userVerified = False
+                    , userUserType = Standard
+                    , userFirstName = Nothing
+                    , userLastName = Nothing
+                    , userUniversityId = Nothing
+                    }
 
     -- Send an email to the given address to verify ownership
     -- sendVerifyEmail :: Email -> VerKey -> VerUrl -> AuthHandler site ()
@@ -421,6 +436,13 @@ isAuthenticated = do
     return $ case muid of
         Nothing -> Unauthorized "You must login to access this page"
         Just _ -> Authorized
+
+isAuthenticatedType :: (Maybe (Entity User) -> Bool) -> Handler AuthResult
+isAuthenticatedType isType = do
+    muser <- maybeAuth
+    return $ case isType muser of
+        False -> Unauthorized "You lack required permission"
+        True -> Authorized
 
 instance YesodAuthPersist App
 

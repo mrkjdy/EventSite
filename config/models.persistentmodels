@@ -35,6 +35,7 @@ University
     name Text
     location Text
     description Text
+    UniqueUniversity name
     deriving Show
 UserRSO
     userId UserId
