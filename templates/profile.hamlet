@@ -6,12 +6,11 @@
     <p>
       This page is for managing your profile.
 
-    <!--- <form role=form method=post action=@{ProfileR} enctype=#{formEnctype}>
+    <form role=form method=post action=@{ProfileR} enctype=#{formEnctype}>
       ^{formWidget}
 
       <button .btn.btn-primary type="submit">
           Update profile
-    --->
-
+    <p>
     <p>
       Your email is: <strong><span class="username">#{userEmail user}</span></strong>

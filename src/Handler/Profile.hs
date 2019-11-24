@@ -1,23 +1,24 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
+
 module Handler.Profile where
 
 import Import
+import Yesod.Form.Bootstrap3 (BootstrapFormLayout (..), renderBootstrap3)
 
 data ProfileForm = ProfileForm
     { userType :: UserType
-    , firstName :: Text
-    , lastName :: Text
-    , universityNameForm :: Text
+    , firstName :: Maybe Text
+    , lastName :: Maybe Text
+    , university :: Entity University
     }
 
 getProfileR :: Handler Html
 getProfileR = do
     (_, user) <- requireAuthPair
-    -- (formWidget, formEnctype) <- generateFormPost $ profileForm user
+    (formWidget, formEnctype) <- generateFormPost $
+        renderBootstrap3 BootstrapBasicForm $ profileForm user
     defaultLayout $ do
         setTitle . toHtml $ userEmail user <> "'s User page"
         $(widgetFile "profile")
@@ -25,14 +26,19 @@ getProfileR = do
 postProfileR :: Handler Html
 postProfileR = error "Not yet implemented: postProfileR"
 
--- profileForm :: User -> Form ProfileForm
--- profileForm user = renderBootstrap3 BootstrapBasicForm $ ProfileForm
---     <$> areq (selectFieldList [(Standard, "Standard")
---                               ,(Host, "Host")
---                               ,(Super, "Super")
---                               ]
---              ) "UserType" Nothing
---     <*> aopt textField "First name" Nothing -- fromMaybe "" $ userFirstName user
---     <*> aopt textField (Just "Last name") Nothing -- $ fromMaybe "" $ userLastName user
---     -- <*> areq (selectFieldList universities) "University" Nothing --(Just (userUniversityName user))
---     --     where universities = optionsPersist [] [Asc UniversityName] universityName
+profileForm :: User -> AForm Handler ProfileForm
+profileForm user = ProfileForm
+    <$> areq (selectFieldList usertypes) "UserType" (userUserType <$> Just user)
+    <*> aopt textField "First name" (userFirstName <$> Just user)
+    <*> aopt textField "Last name" (userLastName <$> Just user)
+    <*> areq (selectField universities) "University" Nothing -- (userUniversity user)
+    where
+        usertypes :: [(Text, UserType)]
+        usertypes = [("Standard", Standard), ("Host", Host), ("Super", Super)]
+        -- userUniversity :: User -> Handler (Maybe (Entity University))
+        -- userUniversity user = case userUniversityId user of
+        --     Nothing -> Nothing
+        --     (Just uniid) -> runDB $ case get uniid of
+        --         Nothing -> Nothing
+        --         (Just (Just unival)) -> (Just (Entity uniid unival))
+        universities = optionsPersist [] [Asc UniversityName] universityName
